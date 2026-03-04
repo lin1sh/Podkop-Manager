@@ -24,71 +24,105 @@ BYEDPI_ARCH="$LOCAL_ARCH"
 BYEDPI_FILE="byedpi_${BYEDPI_VER}_${BYEDPI_ARCH}.ipk"
 BYEDPI_URL="https://github.com/DPITrickster/ByeDPI-OpenWrt/releases/download/v0.17.3-24.10/${BYEDPI_FILE}"
 
+if command -v apk >/dev/null 2>&1; then
+    PKG_IS_APK=1
+    PKG_MANAGER="apk list -I 2>/dev/null"
+else
+    PKG_IS_APK=0
+    PKG_MANAGER="opkg list-installed 2>/dev/null"
+fi
+
+
+pkg_remove() { local pkg_name="$1"; if [ "$PKG_IS_APK" -eq 1 ]; then apk del "$pkg_name" >/dev/null 2>&1 || true; else opkg remove --force-depends "$pkg_name" >/dev/null 2>&1 || true; fi; }
+
 
 # ==========================================
 # AWG
 # ==========================================
 install_AWG() {
+
 echo -e "\n${MAGENTA}Устанавливаем AWG + интерфейс${NC}"
-echo -e "${GREEN}Обновляем список пакетов${NC}"
-opkg update >/dev/null 2>&1 || { echo -e "\n${RED}Ошибка при обновлении списка пакетов!${NC}\n"; read -p "Нажмите Enter..." dummy; return; }
-PKGARCH=$(opkg print-architecture | awk 'BEGIN {max=0} {if ($3 > max) {max = $3; arch = $2}} END {print arch}')
+
+VERSION=$(ubus call system board | jsonfilter -e '@.release.version' | tr -d '\n')
+MAJOR_VERSION=$(echo "$VERSION" | cut -d '.' -f1)
+
+if [ -z "$VERSION" ]; then
+    echo -e "\n${RED}Не удалось определить версию OpenWrt!${NC}\n"
+    read -p "Нажмите Enter..." dummy
+    return
+fi
+
 TARGET=$(ubus call system board | jsonfilter -e '@.release.target' | cut -d '/' -f1)
 SUBTARGET=$(ubus call system board | jsonfilter -e '@.release.target' | cut -d '/' -f2)
-VERSION=$(ubus call system board | jsonfilter -e '@.release.version')
-PKGPOSTFIX="_v${VERSION}_${PKGARCH}_${TARGET}_${SUBTARGET}.ipk"
-BASE_URL="https://github.com/FreeRKN/awg-openwrt/releases/download/"
+
+BASE_URL="https://github.com/Slava-Shchipunov/awg-openwrt/releases/download/"
 AWG_DIR="/tmp/amneziawg"
 mkdir -p "$AWG_DIR"
+
 install_pkg() {
-local pkgname=$1
-local filename="${pkgname}${PKGPOSTFIX}"
-local url="${BASE_URL}v${VERSION}/${filename}"
-    if wget -O "$AWG_DIR/$filename" "$url" >/dev/null 2>&1 ; then
-        echo -e "${CYAN}Устанавливаем ${NC}$pkgname"
-        if ! opkg install "$AWG_DIR/$filename" >/dev/null 2>&1 ; then
+    local pkgname=$1
+    local filename="${pkgname}${PKGPOSTFIX}"
+    local url="${BASE_URL}v${VERSION}/${filename}"
+
+    echo -e "${CYAN}Скачиваем:${NC} $filename"
+
+    if wget -O "$AWG_DIR/$filename" "$url" >/dev/null 2>&1; then
+        echo -e "${CYAN}Устанавливаем:${NC} $pkgname"
+        if ! $INSTALL_CMD "$AWG_DIR/$filename" >/dev/null 2>&1; then
             echo -e "\n${RED}Ошибка установки $pkgname!${NC}\n"
-            read -p "Нажмите Enter..." dummy; return
+            read -p "Нажмите Enter..." dummy
+            return 1
         fi
     else
         echo -e "\n${RED}Ошибка! Не удалось скачать $filename${NC}\n"
-        read -p "Нажмите Enter..." dummy; return
+        read -p "Нажмите Enter..." dummy
+        return 1
     fi
 }
+
+# --- OpenWrt 25+ (apk) ---
+if [ "$MAJOR_VERSION" -ge 25 ] 2>/dev/null; then
+
+    echo -e "${GREEN}Обнаружен OpenWrt $VERSION (apk)${NC}"
+
+    PKGARCH=$(cat /etc/apk/arch)
+    PKGPOSTFIX="_v${VERSION}_${PKGARCH}_${TARGET}_${SUBTARGET}.apk"
+    INSTALL_CMD="apk add --allow-untrusted"
+
+# --- OpenWrt 24 и ниже (opkg) ---
+else
+
+    echo -e "${GREEN}Обнаружен OpenWrt $VERSION (opkg)${NC}"
+
+    echo -e "${GREEN}Обновляем список пакетов${NC}"
+    opkg update >/dev/null 2>&1 || {
+        echo -e "\n${RED}Ошибка при обновлении списка пакетов!${NC}\n"
+        read -p "Нажмите Enter..." dummy
+        return
+    }
+
+    PKGARCH=$(opkg print-architecture | awk 'BEGIN {max=0} {if ($3 > max) {max=$3; arch=$2}} END {print arch}')
+    PKGPOSTFIX="_v${VERSION}_${PKGARCH}_${TARGET}_${SUBTARGET}.ipk"
+    INSTALL_CMD="opkg install"
+
+fi
+
+# --- установка пакетов ---
 install_pkg "kmod-amneziawg"
 install_pkg "amneziawg-tools"
 install_pkg "luci-proto-amneziawg"
-install_pkg "luci-i18n-amneziawg-ru" >/dev/null 2>&1 || echo -e "${RED}Внимание: русская локализация не установлена (не критично)${NC}"
+install_pkg "luci-i18n-amneziawg-ru" >/dev/null 2>&1 || \
+    echo -e "${RED}Внимание: русская локализация не установлена (не критично)${NC}"
+
 rm -rf "$AWG_DIR"
+
 echo -e "${YELLOW}Перезапускаем сеть! Подождите...${NC}"
 /etc/init.d/network restart >/dev/null 2>&1
 sleep 5
-echo -e "AmneziaWG ${GREEN}установлен!${NC}"
 
-echo -e "${MAGENTA}Устанавливаем интерфейс AWG${NC}"
-IF_NAME="AWG"
-PROTO="amneziawg"
-DEV_NAME="amneziawg0"
-if grep -q "config interface '$IF_NAME'" /etc/config/network; then
-echo -e "${RED}Интерфейс ${NC}$IF_NAME${RED} уже существует${NC}"
-else
-echo -e "${CYAN}Добавляем интерфейс ${NC}$IF_NAME"
-uci batch <<EOF
-set network.$IF_NAME=interface
-set network.$IF_NAME.proto=$PROTO
-set network.$IF_NAME.device=$DEV_NAME
-commit network
-EOF
-fi
-echo -e "${CYAN}Перезапускаем сеть${NC}"
-
-/etc/init.d/network restart
-sleep 5
-# /etc/init.d/firewall restart
-# /etc/init.d/uhttpd restart
-
-echo -e "${GREEN}Интерфейс ${NC}$IF_NAME${GREEN} создан и активирован!${NC}"
-echo -e "${YELLOW}Вставьте рабочий конфиг в Interfaces (Интерфейс) AWG!${NC}\n"
+echo -e "\nAmneziaWG ${GREEN}установлен!${NC}\n"
+echo -e "${GREEN}Создайте интерфейс ${NC}AWG${GREEN} в ${NC}LuCI${GREEN}!${NC}\n"
+echo -e "${YELLOW}Вставьте в него рабочий конфиг!${NC}\n"
 read -p "Нажмите Enter..." dummy
 }
 
@@ -151,7 +185,11 @@ read -p "Нажмите Enter..." dummy
 get_versions() {
 
  # --- ByeDPI установленная версия ---
-    BYEDPI_VER=$(opkg list-installed | grep '^byedpi ' | awk '{print $3}' | sed 's/-r[0-9]\+$//')
+    if command -v apk >/dev/null 2>&1; then
+    BYEDPI_VER=$(apk list -I 2>/dev/null | grep '^byedpi-' | awk -F'-' '{print $2}' | sed 's/-r[0-9]\+$//' | head -1)
+else
+    BYEDPI_VER=$(opkg list-installed 2>/dev/null | grep '^byedpi ' | awk '{print $3}' | sed 's/-r[0-9]\+$//')
+fi
     [ -z "$BYEDPI_VER" ] && BYEDPI_VER="не найдена"
 
     # --- Архитектура ---
@@ -528,7 +566,9 @@ uninstall_podkop() {
     echo -e "\n${MAGENTA}Удаление Podkop${NC}"
     
     # Удаляем пакеты
-    opkg remove luci-i18n-podkop-ru luci-app-podkop podkop --autoremove >/dev/null 2>&1 || true
+pkg_remove luci-i18n-podkop-ru
+pkg_remove luci-app-podkop podkop
+pkg_remove podkop
 
     # Удаляем конфиги и временные папки
     rm -rf /etc/config/podkop /tmp/podkop_installer
@@ -548,6 +588,12 @@ uninstall_podkop() {
 uninstall_AWG() {
 echo -e "\n${MAGENTA}Удаление AWG + интерфейс${NC}"
 opkg remove --force-removal-of-dependent-packages luci-i18n-amneziawg-ru luci-proto-amneziawg amneziawg-tools kmod-amneziawg >/dev/null 2>&1
+
+pkg_remove luci-i18n-amneziawg-ru
+pkg_remove luci-proto-amneziawg
+pkg_remove amneziawg-tools
+pkg_remove kmod-amneziawg
+
 echo -e "AWG ${GREEN}удалён.${NC}"
 echo -e "${MAGENTA}Удаляем интерфейс AWG${NC}"
 uci -q delete network.AWG
@@ -575,7 +621,7 @@ fi
 	echo -e "╔═══════════════════════════════╗"
 	echo -e "║         ${BLUE}Podkop Manager${NC}        ║"
 	echo -e "╚═══════════════════════════════╝"
-	echo -e "                ${DGRAY}by StressOzz v2.5${NC}"
+	echo -e "                ${DGRAY}by StressOzz v2.6${NC}"
 
 
 	echo -e "${MAGENTA}--- Podkop ---${NC}"
@@ -584,18 +630,12 @@ fi
 	echo -e "${YELLOW}Установленная версия:${NC} $BYEDPI_STATUS"
 	echo -e "${YELLOW}Текущая стратегия:${NC} ${WHITE}$CURRENT_STRATEGY${NC}"
 	echo -e "${MAGENTA}--- AWG ---${NC}"
-if command -v amneziawg >/dev/null 2>&1 || opkg list-installed | grep -q "^amneziawg-tools"; then
+
+if command -v amneziawg >/dev/null 2>&1 || eval "$PKG_MANAGER" | grep -q "amneziawg-tools"; then
     echo -e "${YELLOW}AWG: ${GREEN}установлен${NC}"
 else
     echo -e "${YELLOW}AWG: ${RED}не установлен${NC}"
 fi
-
-if uci -q get network.AWG >/dev/null; then
-    echo -e "${YELLOW}Интерфейс AWG: ${GREEN}установлен${NC}"
-else
-    echo -e "${YELLOW}Интерфейс AWG: ${RED}не установлен${NC}"
-fi
-
 
  	echo -e "\n${CYAN}1) ${GREEN}Установить ${NC}Podkop"
 	echo -e "${CYAN}2) ${GREEN}Удалить ${NC}Podkop"
@@ -603,8 +643,8 @@ fi
     echo -e "${CYAN}4) ${GREEN}Удалить ${NC}ByeDPI"
     echo -e "${CYAN}5) ${GREEN}Интегрировать ${NC}ByeDPI ${GREEN}в ${NC}Podkop"
     echo -e "${CYAN}6) ${GREEN}Изменить текущую стратегию ${NC}ByeDPI"
-	echo -e "${CYAN}7) ${GREEN}Установить ${NC}AWG ${GREEN}+${NC} интерфейс"
-	echo -e "${CYAN}8) ${GREEN}Удалить ${NC}AWG ${GREEN}+${NC} интерфейс"
+	echo -e "${CYAN}7) ${GREEN}Установить ${NC}AWG"
+	echo -e "${CYAN}8) ${GREEN}Удалить ${NC}AWG"
 	echo -e "${CYAN}9) ${GREEN}Интегрировать ${NC}AWG ${GREEN}в ${NC}Podkop"
 	echo -e "${CYAN}0) ${GREEN}Перезагрузить устройство${NC}"
 	echo -e "${CYAN}Enter) ${GREEN}Выход${NC}"
