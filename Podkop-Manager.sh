@@ -39,6 +39,8 @@ PAUSE() { echo -ne "\nНажмите Enter..."; read dummy; }
 
 pkg_remove() { local pkg_name="$1"; if [ "$PKG_IS_APK" -eq 1 ]; then apk del "$pkg_name" >/dev/null 2>&1 || true; else opkg remove --force-depends "$pkg_name" >/dev/null 2>&1 || true; fi; }
 
+echo 'sh <(wget -O - https://raw.githubusercontent.com/StressOzz/Podkop-Manager/main/Podkop-Manager.sh)' > /usr/bin/pkm; chmod +x /usr/bin/pkm
+
 # ==========================================
 # AWG
 # ==========================================
