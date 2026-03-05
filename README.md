@@ -35,11 +35,11 @@ sh <(wget -O - https://raw.githubusercontent.com/StressOzz/Podkop-Manager/main/P
 ### 5) Интегрировать ByeDPI в Podkop
 Настривает Podkop для работы с ByeDPI (все настройки Podkop будут сброшены)
 ### 6) Изменить текущую стратегию ByeDPI
-Позволяет самому изменить стратегию
-### 7) Установить AWG
-Устанавливает AmneziaWG
-### 8) Удалить AWG
-Удаляеет AmneziaWG
+Позволяет изменить стратегию ByeDPI
+### 7) Установить AWG и интерфейс AWG
+Устанавливает AmneziaWG и интерфейс AWG
+### 8) Удалить AWG и интерфейс AWG
+Удаляеет AmneziaWG и интерфейс AWG
 ### 9) Интегрировать AWG в Podkop
 Настривает Podkop для работы с AWG (все настройки Podkop будут сброшены)
 ### 0) Перезагрузить устройство
@@ -48,8 +48,6 @@ Reboot
 ## Советы по использованию
 
 - После первой интеграции ByeDPI обязательно перезагрузите роутер
-
-- Необходимо создать интерфейс в **Network → Interfaces → Add new interface... → Name: AWG → Protocol: AmneziaWG VPN → Create interface**
 
 - Необходимо загрузить конфиг Amnezia в **Network → Interfaces → AWG → Edit → Load configuration…**
 
