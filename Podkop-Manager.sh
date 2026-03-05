@@ -256,8 +256,7 @@ echo -e "${CYAN}Скачиваем ${NC}$BYEDPI_FILE${NC}"
 cd "$tmpDIR" || return
 
 wget -q -U "Mozilla/5.0" -O "$BYEDPI_FILE" "$BYEDPI_URL" || {
-echo -e "${RED}Ошибка загрузки ${NC}$BYEDPI_FILE"
-echo -e "${YELLOW}URL: $BYEDPI_URL${NC}"
+echo -e "\n${RED}Ошибка загрузки ${NC}$BYEDPI_FILE"
 PAUSE
 return
 }
@@ -265,7 +264,7 @@ return
 echo -e "${CYAN}Устанавливаем${NC} $BYEDPI_FILE${NC}"
 $INSTALL_CMD "$BYEDPI_FILE" >/dev/null 2>&1
 
-[ $? -eq 0 ] || echo -e "${RED}Ошибка установки!${NC}"
+[ $? -eq 0 ] || echo -e "\n${RED}Ошибка установки!${NC}"
 
 if [ -f /etc/init.d/byedpi ]; then
 /etc/init.d/byedpi enable >/dev/null 2>&1
@@ -348,13 +347,13 @@ AVAILABLE_SPACE=$(df /overlay | awk 'NR==2 {print $4}')
 REQUIRED_SPACE=26000
 
 [ "$AVAILABLE_SPACE" -lt "$REQUIRED_SPACE" ] && {
-echo -e "${RED}Недостаточно свободного места!${NC}"
+echo -e "\n${RED}Недостаточно свободного места!${NC}"
 PAUSE
 return
 }
 
 nslookup google.com >/dev/null 2>&1 || {
-echo -e "${RED}DNS не работает!${NC}"
+echo -e "\n${RED}DNS не работает!${NC}"
 PAUSE
 return
 }
@@ -380,7 +379,7 @@ fi
 /usr/sbin/ntpd -q -p 194.190.168.1 -p 216.239.35.0 -p 216.239.35.4 -p 162.159.200.1 -p 162.159.200.123 >/dev/null 2>&1
 
 pkg_list_update || {
-echo -e "${RED}Не удалось обновить список пакетов!${NC}"
+echo -e "\n${RED}Не удалось обновить список пакетов!${NC}"
 PAUSE
 return
 }
@@ -400,12 +399,12 @@ echo -e "${CYAN}Скачиваем ${NC}$filename"
 if wget -q -O "$filepath" "$url" >/dev/null 2>&1 && [ -s "$filepath" ]; then
 download_success=1
 else
-echo -e "${RED}Ошибка скачивания ${NC}$filename"
+echo -e "\n${RED}Ошибка скачивания ${NC}$filename"
 fi
 done
 
 [ $download_success -eq 0 ] && {
-echo -e "${RED}Нет успешно скачанных пакетов${NC}"
+echo -e "\n${RED}Нет успешно скачанных пакетов${NC}"
 PAUSE
 return
 }
@@ -438,7 +437,7 @@ integration_byedpi_podkop() {
 echo -e "\n${MAGENTA}Интеграция ByeDPI в Podkop${NC}"
 
 if ! command -v byedpi >/dev/null 2>&1 && [ ! -f /etc/init.d/byedpi ]; then
-echo -e "${RED}ByeDPI не установлен!${NC}"
+echo -e "\n${RED}ByeDPI не установлен!${NC}"
 PAUSE
 return
 fi
