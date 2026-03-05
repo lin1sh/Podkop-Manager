@@ -53,6 +53,8 @@ Reboot
 
 - Необходимо загрузить конфиг Amnezia в **Network → Interfaces → AWG → Edit → Load configuration…**
 
+- В конфиге Amnezia, обязательно должна быть строчка `PersistentKeepalive = 25`
+
 - Рекомендовано подождать 30 секунд после перезагрузки устройства, чтобы все службы (ByeDPI, Podkop, sing-box, DNS и маршрутизация) полностью запустились и вступили в силу
 
 - Если **GitHub** выдаёт ошибку лимита запросов — подождите 30–60 минут
@@ -60,7 +62,6 @@ Reboot
 - При смене стратегии **ByeDPI** (пункт 4) можно не перезагружать устройство
 
 - Всё что связанно с **Podkop** можно прочитать в [Документация](https://podkop.net/)
-
 
 ---
 [<img width="190" height="175" alt="donate-button-click-donation-charity-600nw-2339825981" src="https://github.com/user-attachments/assets/2999757b-fbf3-4149-bf6c-48bf3e241529" />](https://github.com/StressOzz#-поддержать-проект)
