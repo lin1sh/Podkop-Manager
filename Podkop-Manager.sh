@@ -16,9 +16,10 @@ tmpDIR="/tmp/PodkopManager"
 rm -rf "$tmpDIR"
 mkdir -p "$tmpDIR"
 
-PODKOP_LATEST_VER="0.7.14"
+PODKOP_LATEST_VER="$(curl -Ls -o /dev/null -w '%{url_effective}' https://github.com/itdoginfo/podkop/releases/latest | sed -E 's#.*/tag/v?##')"
 
 BYEDPI_VER="0.17.3"
+
 BYEDPI_LATEST_VER="$BYEDPI_VER"
 
 BASE_URL="https://github.com/Slava-Shchipunov/awg-openwrt/releases/download/"
