@@ -85,6 +85,7 @@ Reboot
 
 - **[itdoginfo](https://github.com/itdoginfo)** за [podkop](https://github.com/itdoginfo/podkop)
 - **[hufrea](https://github.com/hufrea)** за [byedpi](https://github.com/hufrea/byedpi)
+- [**Slava-Shchipunov**](https://github.com/Slava-Shchipunov) за [AmneziaWG for OpenWrt](https://github.com/Slava-Shchipunov/awg-openwrt)
 - **[spvkgn](https://github.com/spvkgn)** за GitHub Actions
 - **[romanvht](https://github.com/romanvht)** за возможность тестировать стратегии
 - **[DPITrickster](https://github.com/DPITrickster)** за версию ByeDPI для OpenWRT и за написание гайда по ручной установке
